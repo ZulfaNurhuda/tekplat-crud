@@ -284,7 +284,3 @@ Periksa:
 3. firewall Ubuntu,
 4. security group cloud jika VM berjalan di provider cloud,
 5. reverse proxy atau mapping domain.
-
-## Catatan penting
-
-Panduan ini dibuat tanpa akses langsung ke Ubuntu VM ataupun instance aaPanel nyata. Karena itu, istilah menu bisa sedikit berbeda antarversi aaPanel, tetapi konsep dan alurnya tetap sama.
