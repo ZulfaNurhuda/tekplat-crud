@@ -1,4 +1,4 @@
-# Misi CRUD dan End Goal
+# Tugas CRUD dan End Goal
 
 Dokumen ini menjelaskan target akhir yang harus dicapai mahasiswa.
 
