@@ -1,0 +1,24 @@
+{{define "content"}}
+<div class="page-header">
+    <div class="page-header-copy">
+        <p class="page-kicker">Status</p>
+        <h2>Aktivasi Aplikasi</h2>
+        <p class="page-subtitle">Aplikasi saat ini tertutup. Masukkan password untuk mengaktifkan kembali.</p>
+    </div>
+</div>
+
+<div class="form-container">
+    <div class="card form-card">
+        <form action="/activate" method="POST">
+            <div class="form-group">
+                <label for="password">Password Aktivasi</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Masukkan password" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Aktifkan Aplikasi</button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}
