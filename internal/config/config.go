@@ -12,7 +12,6 @@ type Config struct {
 	DBName             string
 	DBUser             string
 	DBPassword         string
-	IsActive           bool
 	ActivationPassword string
 }
 
@@ -24,7 +23,6 @@ func Load() Config {
 		DBName:             getEnv("DB_NAME", "crud_db"),
 		DBUser:             getEnv("DB_USER", "crud_user"),
 		DBPassword:         getEnv("DB_PASSWORD", ""),
-		IsActive:           getEnv("IS_ACTIVE", "false") == "true",
 		ActivationPassword: getEnv("ACTIVATION_PASSWORD", "rahasia"),
 	}
 }
