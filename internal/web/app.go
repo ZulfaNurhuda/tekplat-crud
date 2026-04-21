@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"tekplat-crud/internal/config"
@@ -17,8 +18,10 @@ import (
 )
 
 type App struct {
-	config config.Config
-	store  *store.UserStore
+	config   config.Config
+	store    *store.UserStore
+	isActive bool
+	mu       sync.RWMutex
 }
 
 type TemplateData struct {
@@ -38,8 +41,9 @@ type UserFormData struct {
 
 func NewApp(cfg config.Config, userStore *store.UserStore) *App {
 	return &App{
-		config: cfg,
-		store:  userStore,
+		config:   cfg,
+		store:    userStore,
+		isActive: cfg.IsActive,
 	}
 }
 
@@ -53,8 +57,88 @@ func (a *App) Routes() http.Handler {
 	mux.HandleFunc("/users", a.handleUsers)
 	mux.HandleFunc("/users/new", a.handleNewUserForm)
 	mux.HandleFunc("/users/", a.handleUserActions)
+	mux.HandleFunc("/deactivate", a.handleDeactivate)
+	mux.HandleFunc("/activate", a.handleActivate)
 
-	return a.logRequest(mux)
+	return a.logRequest(a.activeCheck(mux))
+}
+
+func (a *App) activeCheck(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		a.mu.RLock()
+		active := a.isActive
+		a.mu.RUnlock()
+
+		// Jika active false, berarti aplikasi ditutup ("Resource Closed")
+		if !active {
+			// Izinkan akses ke static files agar halaman closed tetap ber-style
+			if strings.HasPrefix(r.URL.Path, "/static/") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Pengecualian endpoint untuk /activate supaya bisa dibuka untuk input password
+			if r.URL.Path == "/activate" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			data := TemplateData{
+				PageTitle: "Resource Closed",
+			}
+			a.render(w, http.StatusServiceUnavailable, "closed.gohtml", data)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (a *App) handleDeactivate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		a.methodNotAllowed(w)
+		return
+	}
+
+	a.mu.Lock()
+	a.isActive = false
+	a.mu.Unlock()
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a *App) handleActivate(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		data := TemplateData{
+			PageTitle: "Aktivasi Aplikasi",
+		}
+		a.render(w, http.StatusOK, "activate.gohtml", data)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			a.badRequest(w)
+			return
+		}
+
+		password := r.FormValue("password")
+		if password == a.config.ActivationPassword {
+			a.mu.Lock()
+			a.isActive = true
+			a.mu.Unlock()
+			http.Redirect(w, r, "/users", http.StatusSeeOther)
+			return
+		}
+
+		data := TemplateData{
+			PageTitle: "Aktivasi Aplikasi",
+			Error:     "Password aktivasi salah.",
+		}
+		a.render(w, http.StatusUnauthorized, "activate.gohtml", data)
+		return
+	}
+
+	a.methodNotAllowed(w)
 }
 
 func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
