@@ -421,7 +421,10 @@ func (a *App) render(w http.ResponseWriter, status int, page string, data Templa
 }
 
 func (a *App) notFound(w http.ResponseWriter) {
-	http.Error(w, "halaman tidak ditemukan", http.StatusNotFound)
+	data := TemplateData{
+		PageTitle: "Halaman Tidak Ditemukan",
+	}
+	a.render(w, http.StatusNotFound, "404.gohtml", data)
 }
 
 func (a *App) badRequest(w http.ResponseWriter) {
