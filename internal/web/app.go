@@ -3,10 +3,12 @@ package web
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
 	"net/mail"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -25,11 +27,41 @@ type App struct {
 }
 
 type TemplateData struct {
-	PageTitle string
-	Success   string
-	Error     string
-	Form      UserFormData
-	Users     []store.User
+	PageTitle       string
+	Success         string
+	Error           string
+	Form            UserFormData
+	Users           []store.User
+	ShowCloseButton bool
+}
+
+const stateFilePath = "state.json"
+
+type appState struct {
+	IsActive bool `json:"is_active"`
+}
+
+func loadIsActive() bool {
+	data, err := os.ReadFile(stateFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			_ = persistIsActive(false)
+		}
+		return false
+	}
+	var s appState
+	if err := json.Unmarshal(data, &s); err != nil {
+		return false
+	}
+	return s.IsActive
+}
+
+func persistIsActive(val bool) error {
+	data, err := json.Marshal(appState{IsActive: val})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(stateFilePath, data, 0644)
 }
 
 type UserFormData struct {
@@ -43,7 +75,7 @@ func NewApp(cfg config.Config, userStore *store.UserStore) *App {
 	return &App{
 		config:   cfg,
 		store:    userStore,
-		isActive: cfg.IsActive,
+		isActive: loadIsActive(),
 	}
 }
 
@@ -102,6 +134,7 @@ func (a *App) handleDeactivate(w http.ResponseWriter, r *http.Request) {
 	a.mu.Lock()
 	a.isActive = false
 	a.mu.Unlock()
+	_ = persistIsActive(false)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -126,6 +159,7 @@ func (a *App) handleActivate(w http.ResponseWriter, r *http.Request) {
 			a.mu.Lock()
 			a.isActive = true
 			a.mu.Unlock()
+			_ = persistIsActive(true)
 			http.Redirect(w, r, "/users", http.StatusSeeOther)
 			return
 		}
@@ -172,9 +206,10 @@ func (a *App) handleUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		data := TemplateData{
-			PageTitle: "Daftar Users",
-			Success:   statusMessage(r.URL.Query().Get("status")),
-			Users:     users,
+			PageTitle:       "Daftar Users",
+			Success:         statusMessage(r.URL.Query().Get("status")),
+			Users:           users,
+			ShowCloseButton: true,
 		}
 		a.render(w, http.StatusOK, "list.gohtml", data)
 	case http.MethodPost:

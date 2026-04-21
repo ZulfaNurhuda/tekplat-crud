@@ -9,8 +9,13 @@
 </head>
 <body>
     <header class="header">
-        <div class="container">
+        <div class="container" style="display:flex; align-items:center; justify-content:space-between;">
             <div class="logo">TekPlat CRUD Users</div>
+            {{if .ShowCloseButton}}
+            <form action="/deactivate" method="POST" onsubmit="return confirm('Tutup aplikasi?');" style="margin:0;">
+                <button type="submit" class="btn btn-sm btn-secondary" style="font-size:0.7rem; padding:2px 10px; opacity:0.75;">Tutup</button>
+            </form>
+            {{end}}
         </div>
     </header>
     <main class="container app-shell">
